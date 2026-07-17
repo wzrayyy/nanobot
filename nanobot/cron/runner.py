@@ -11,13 +11,13 @@ from typing import Any, Protocol
 from nanobot.agent.tools.cron import CronTool
 from nanobot.bus.events import InboundMessage, OutboundMessage
 from nanobot.cron.session_delivery import origin_delivery_context
-from nanobot.cron.session_turns import CRON_DEFER_UNTIL_IDLE_META, CRON_TRIGGER_META
+from nanobot.cron.session_turns import CRON_DEFER_UNTIL_IDLE_META, CRON_TRIGGER_META, is_bound_cron_job
 from nanobot.cron.types import CronJob
 from nanobot.cron.webui_metadata import cron_proactive_delivery_metadata
 from nanobot.utils.prompt_templates import render_template
 
 
-class BoundCronAgent(Protocol):
+class CronAgent(Protocol):
     tools: Any
 
     async def submit_cron_turn(self, msg: InboundMessage) -> OutboundMessage | None:
@@ -59,10 +59,26 @@ def _bound_session_delivery_context(
     return channel, chat_id, metadata
 
 
-async def run_bound_cron_job(
+def _generate_ephemeral_session_key(job_id: str) -> str:
+    return f'cron:{job_id}:{time.time_ns()}'
+
+
+async def run_cron_job(
     job: CronJob,
     *,
-    agent: BoundCronAgent,
+    agent: CronAgent,
+    cron: CronRunRecorder,
+) -> str | None:
+    if not is_bound_cron_job(job):
+        job.payload.session_key = _generate_ephemeral_session_key(job.id)
+
+    return await _run_bound_cron_job(job, agent=agent, cron=cron)
+
+
+async def _run_bound_cron_job(
+    job: CronJob,
+    *,
+    agent: CronAgent,
     cron: CronRunRecorder,
 ) -> str | None:
     """Execute a session-bound cron job as a normal agent session turn."""

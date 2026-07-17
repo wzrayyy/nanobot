@@ -1608,7 +1608,7 @@ def _run_gateway(
     from nanobot.bus.queue import MessageBus
     from nanobot.bus.runtime_events import RuntimeEventBus
     from nanobot.channels.manager import ChannelManager
-    from nanobot.cron.bound_runner import run_bound_cron_job
+    from nanobot.cron.runner import run_cron_job
     from nanobot.cron.service import CronJobSkippedError, CronService
     from nanobot.cron.session_turns import is_bound_cron_job
     from nanobot.cron.types import CronJob
@@ -1881,7 +1881,7 @@ def _run_gateway(
             return response
 
         if is_bound_cron_job(job):
-            return await run_bound_cron_job(job, agent=agent, cron=cron)
+            return await run_cron_job(job, agent=agent, cron=cron)
 
         reason = "unbound agent cron job must be recreated from a chat session"
         logger.warning(
