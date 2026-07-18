@@ -1881,7 +1881,9 @@ def _run_gateway(
             return response
 
         if is_bound_cron_job(job):
-            return await run_bound_cron_job(job, agent=agent, cron=cron)
+            if job.payload.clean_session and job.payload.session_key:
+                await agent.archive_session(job.payload.session_key)
+            return await run_bound_cron_job(job, loop=agent, cron=cron)
 
         reason = "unbound agent cron job must be recreated from a chat session"
         logger.warning(

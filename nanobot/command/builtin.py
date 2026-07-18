@@ -282,22 +282,7 @@ async def cmd_status(ctx: CommandContext) -> OutboundMessage:
 
 async def cmd_new(ctx: CommandContext) -> OutboundMessage:
     """Stop active task and start a fresh session."""
-    loop = ctx.loop
-    await loop._cancel_active_tasks(ctx.key)
-    session = ctx.session or loop.sessions.get_or_create(ctx.key)
-    snapshot = session.messages[session.last_consolidated:]
-    session.clear()
-    loop.sessions.save(session)
-    loop.sessions.invalidate(session.key)
-    if snapshot:
-        runtime = ctx.runtime or loop.llm_runtime()
-        loop._schedule_background(
-            loop.consolidator.archive(
-                snapshot,
-                runtime=runtime,
-                session_key=ctx.key,
-            )
-        )
+    await ctx.loop.archive_session(ctx.key)
     return OutboundMessage(
         channel=ctx.msg.channel, chat_id=ctx.msg.chat_id,
         content="New session started.",

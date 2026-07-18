@@ -618,6 +618,24 @@ class AgentLoop:
     def pending_local_trigger_ids_for_session(self, session_key: str) -> set[str]:
         return self._local_trigger_turns.pending_trigger_ids_for_session(session_key)
 
+    async def archive_session(self, key: str) -> None:
+        await self._cancel_active_tasks(key)
+        session = self.sessions.get_or_create(key)
+        snapshot = session.messages[session.last_consolidated:]
+        session.clear()
+        self.sessions.save(session)
+        self.sessions.invalidate(session.key)
+
+        if snapshot:
+            runtime = self.llm_runtime()
+            self._schedule_background(
+                self.consolidator.archive(
+                    snapshot,
+                    runtime=runtime,
+                    session_key=key,
+                )
+            )
+
     async def _publish_next_deferred_automation_turn(self, session_key: str) -> None:
         await publish_next_deferred_turn(
             deferred_queues=self._deferred_automation_turns,
