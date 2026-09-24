@@ -37,6 +37,7 @@ from nanobot.bus.queue import MessageBus
 from nanobot.channels.base import BaseChannel
 from nanobot.config.paths import get_media_dir, get_runtime_subdir
 from nanobot.config.schema import Base
+from nanobot.events import ContextCompactionEvent
 
 # ---------------------------------------------------------------------------
 # Protocol constants (from openclaw-weixin types.ts)
@@ -1881,6 +1882,8 @@ class WeixinChannel(BaseChannel):
         self._record_context_send(context_token)
 
     async def send(self, msg: OutboundMessage) -> None:
+        if isinstance(msg.event, ContextCompactionEvent) and not msg.event.notify:
+            return
         if not self._client or not self._token:
             raise RuntimeError("WeChat client not initialized or not authenticated")
         self._assert_session_active()
