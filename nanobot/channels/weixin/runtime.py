@@ -1884,7 +1884,8 @@ class WeixinChannel(BaseChannel):
         self._record_context_send(context_token)
 
     async def send(self, msg: OutboundMessage) -> None:
-        if isinstance(msg.event, ContextCompactionEvent) and not msg.event.notify:
+        event = getattr(msg, "event", None)
+        if isinstance(event, ContextCompactionEvent) and not event.notify:
             return
         if not self._client or not self._token:
             raise RuntimeError("WeChat client not initialized or not authenticated")
@@ -1892,7 +1893,6 @@ class WeixinChannel(BaseChannel):
 
         delivery_id = self._delivery_id(msg)
         delivery_state = self._delivery_state(delivery_id)
-        event = getattr(msg, "event", None)
         progress_event = event if isinstance(event, ProgressEvent) else None
         is_progress = progress_event is not None
 
